@@ -53,11 +53,4 @@ object NetModule {
         return NYCSRepository(apiService = apiService )
     }
 
-    @Provides
-    @Singleton
-    fun provideLocalCache(): LocalCache{
-        return LocalCache
-    }
-
-
 }

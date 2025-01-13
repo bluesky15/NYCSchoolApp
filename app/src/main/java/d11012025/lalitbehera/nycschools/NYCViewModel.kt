@@ -10,18 +10,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+typealias SchoolDataList = NetworkResult<List<SchoolDataResponse>>
+
 @HiltViewModel
-class NYCViewModel @Inject constructor(val repository: NYCSRepository, val localCache: LocalCache) : ViewModel() {
-    private val _schoolListData: MutableStateFlow<NetworkResult<List<SchoolDataResponse>>> =
-        MutableStateFlow(
-            NetworkResult.LOADING
-        )
-    val schoolListData: StateFlow<NetworkResult<List<SchoolDataResponse>>> =
-        _schoolListData.asStateFlow()
+class NYCViewModel @Inject constructor(val repository: NYCSRepository) : ViewModel() {
+    var cachedData: NetworkResult<List<SchoolSatScoreData>>? = null
+    var selectedID = ""
+
+    private val _schoolSatListData: MutableStateFlow<SchoolSatScoreData?> = MutableStateFlow(null)
+    val schoolSatListData: StateFlow<SchoolSatScoreData?> = _schoolSatListData.asStateFlow()
+
+    private val _schoolListData: MutableStateFlow<SchoolDataList> = MutableStateFlow(NetworkResult.LOADING)
+    val schoolListData: StateFlow<SchoolDataList> = _schoolListData.asStateFlow()
 
 
     init {
         getSchoolData()
+        getSatData()
     }
 
     fun getSchoolData() {
@@ -32,7 +37,24 @@ class NYCViewModel @Inject constructor(val repository: NYCSRepository, val local
         }
     }
 
-    fun updateId(id:String){
-        localCache.id =id
+    fun getSatData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getSatScore().collect {
+                if (it is NetworkResult.SUCCESS) {
+                    cachedData = it
+                    filterData()
+                }
+            }
+        }
+    }
+
+    fun filterData() {
+        viewModelScope.launch {
+            val school =
+                (cachedData as NetworkResult.SUCCESS<List<SchoolSatScoreData>>).data.filter { it.id == selectedID }
+            school.firstOrNull()?.let {
+                _schoolSatListData.value = it
+            }
+        }
     }
 }

@@ -45,20 +45,21 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainView() {
     val navController = rememberNavController()
+    val viewModel: NYCViewModel = hiltViewModel()
     Scaffold(modifier = Modifier.fillMaxSize()) {
         NavHost(
             startDestination = "first",
             navController = navController,
             modifier = Modifier.padding(it)
         ) {
-            composable("first") { FirstScreen(navController) }
-            composable("second") { SecondScreen(navController) }
+            composable("first") { FirstScreen(navController, viewModel) }
+            composable("second") { SecondScreen(viewModel) }
         }
     }
 }
 
 @Composable
-fun FirstScreen(navController: NavController, viewModel: NYCViewModel = hiltViewModel()) {
+fun FirstScreen(navController: NavController, viewModel: NYCViewModel) {
     val schoolData = viewModel.schoolListData.collectAsState()
     Box(modifier = Modifier.fillMaxSize()) {
         when (schoolData.value) {
@@ -93,8 +94,9 @@ fun FirstScreen(navController: NavController, viewModel: NYCViewModel = hiltView
                             Text("Address:")
                             Text("${it.city}, ${it.zip}")
                             Button(onClick = {
-                                viewModel.updateId(it.id)
-                                navController.navigate("second") }) { Text("Show Details") }
+                                viewModel.selectedID = it.id
+                                navController.navigate("second")
+                            }) { Text("Show Details") }
 
                         }
                     }
@@ -105,17 +107,15 @@ fun FirstScreen(navController: NavController, viewModel: NYCViewModel = hiltView
 }
 
 @Composable
-fun SecondScreen(navController: NavController, viewModel: SATViewModel = hiltViewModel()) {
-    LaunchedEffect(Unit) {
-        viewModel.getSatData()
-    }
+fun SecondScreen(viewModel: NYCViewModel) {
+    LaunchedEffect(Unit) { viewModel.filterData() }
     Box(modifier = Modifier.fillMaxSize()) {
         val data = viewModel.schoolSatListData.collectAsState(null)
-        if(data.value?.id?.isNotEmpty() == true){
+        if (data.value?.id?.isNotEmpty() == true) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 2.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp)
             ) {
                 Text("School Name:")
                 Text("${data.value?.schoolName}")
@@ -129,24 +129,6 @@ fun SecondScreen(navController: NavController, viewModel: SATViewModel = hiltVie
                 Text("${data.value?.satCriticalReadingAverageScore}")
             }
         }
-
-
-//        when(scoreData.value){
-//            is NetworkResult.ERROR -> {
-//                Box(
-//                    modifier = Modifier.fillMaxSize(),
-//                    contentAlignment = Alignment.Center
-//                ) { Text("Error!") }
-//            }
-//            NetworkResult.LOADING -> {  Box(
-//                modifier = Modifier.fillMaxSize(),
-//                contentAlignment = Alignment.Center
-//            ) { Text("Loading...") }}
-//            is NetworkResult.SUCCESS -> {
-//                val data = (scoreData.value as NetworkResult.SUCCESS<List<SchoolSatScoreData>>).data.filter { it.id == viewModel.seleted }
-//
-//            }
-//        }
 
     }
 }
